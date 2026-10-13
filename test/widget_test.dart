@@ -7,7 +7,8 @@ void main() {
   testWidgets('Login y registro conservan tema y validan los campos', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(restaurarSesion: () async => null));
+    await tester.pumpAndSettle();
     expect(find.text('Iniciar sesión'), findsOneWidget);
     expect(find.text('Nombre completo'), findsNothing);
     await tester.ensureVisible(find.text('Entrar a LifeSync'));

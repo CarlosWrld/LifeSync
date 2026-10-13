@@ -20,7 +20,7 @@ void main() {
     expect(first.esAdmin, isFalse);
     expect(first.proveedor, 'google');
     await db.guardar('tareas', {'titulo': 'Conservar', 'hora': '10:00'});
-    db.cerrarSesion();
+    await db.cerrarSesion();
     expect(await db.iniciarSesion('test@gmail.com', ''), isNull);
     final second = await db.guardarSesionGoogle(
       googleId: 'google-123',

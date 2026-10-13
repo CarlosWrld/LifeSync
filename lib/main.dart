@@ -19,7 +19,9 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.restaurarSesion});
+
+  final Future<Usuario?> Function()? restaurarSesion;
 
   @override
   State<MyApp> createState() => _LifeSyncAppState();
@@ -27,6 +29,31 @@ class MyApp extends StatefulWidget {
 
 class _LifeSyncAppState extends State<MyApp> {
   Usuario? usuario;
+  bool recuperandoSesion = true;
+  bool errorSesion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    recuperarSesion();
+  }
+
+  Future<void> recuperarSesion() async {
+    setState(() {
+      recuperandoSesion = true;
+      errorSesion = false;
+    });
+    try {
+      final restaurar =
+          widget.restaurarSesion ?? DatabaseHelper.instance.restaurarSesion;
+      final guardado = await restaurar();
+      if (mounted) setState(() => usuario = guardado);
+    } catch (_) {
+      if (mounted) setState(() => errorSesion = true);
+    } finally {
+      if (mounted) setState(() => recuperandoSesion = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +92,24 @@ class _LifeSyncAppState extends State<MyApp> {
           ),
         ),
       ),
-      home: usuario == null
+      home: recuperandoSesion || errorSesion
+          ? Scaffold(
+              body: Center(
+                child: recuperandoSesion
+                    ? const CircularProgressIndicator()
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('No se pudo recuperar tu sesión.'),
+                          TextButton(
+                            onPressed: recuperarSesion,
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+              ),
+            )
+          : usuario == null
           ? RegistroPage(
               onRegistro: (nuevoUsuario) {
                 setState(() => usuario = nuevoUsuario);
@@ -77,12 +121,15 @@ class _LifeSyncAppState extends State<MyApp> {
                 setState(() => usuario = actualizado);
               },
               onCerrarSesion: () async {
-                try {
-                  await GoogleAuthService.instance.cerrarSesion();
-                } catch (_) {
-                  // La sesión local debe cerrarse incluso si falla el SDK.
+                final esGoogle = usuario?.proveedor == 'google';
+                await DatabaseHelper.instance.cerrarSesion();
+                if (esGoogle) {
+                  try {
+                    await GoogleAuthService.instance.cerrarSesion();
+                  } catch (_) {
+                    // La sesión local ya está cerrada aunque falle el SDK.
+                  }
                 }
-                DatabaseHelper.instance.cerrarSesion();
                 if (mounted) setState(() => usuario = null);
               },
             ),
@@ -407,7 +454,7 @@ class InicioTelefono extends StatefulWidget {
 
   final Usuario usuario;
   final ValueChanged<Usuario> onPerfilActualizado;
-  final VoidCallback onCerrarSesion;
+  final Future<void> Function() onCerrarSesion;
 
   @override
   State<InicioTelefono> createState() => _InicioTelefonoState();
@@ -1375,16 +1422,14 @@ class _InicioTelefonoState extends State<InicioTelefono>
     });
     try {
       await notificaciones.cancelarTodos();
-      if (mounted) widget.onCerrarSesion();
+      if (mounted) await widget.onCerrarSesion();
     } catch (_) {
       if (!mounted) return;
       setState(() {
         cerrandoSesion = false;
         guardando = false;
       });
-      aviso(
-        'No se pudieron cancelar tus recordatorios. Intenta cerrar sesión de nuevo.',
-      );
+      aviso('No se pudo cerrar tu sesión. Intenta de nuevo.');
     }
   }
 

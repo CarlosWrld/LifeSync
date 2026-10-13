@@ -29,7 +29,7 @@ class GoogleAuthService {
       await (_initialization ??= GoogleSignIn.instance.initialize(
         serverClientId: clientId.isEmpty ? null : clientId,
       ));
-      // Siempre permite elegir una cuenta; no restaura sesiones silenciosamente.
+      // Un acceso explícito permite elegir cuenta. El arranque restaura la sesión local.
       await GoogleSignIn.instance.signOut();
       final cuenta = await GoogleSignIn.instance.authenticate();
       final token = cuenta.authentication.idToken;
@@ -78,9 +78,14 @@ class GoogleAuthService {
 
   Future<void> cerrarSesion() async {
     try {
-      if (Firebase.apps.isNotEmpty) await FirebaseAuth.instance.signOut();
+      // Tras reiniciar, la sesión local puede estar restaurada sin iniciar los SDK.
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      await FirebaseAuth.instance.signOut();
     } finally {
-      if (_initialization != null) await GoogleSignIn.instance.signOut();
+      await (_initialization ??= GoogleSignIn.instance.initialize(
+        serverClientId: clientId.isEmpty ? null : clientId,
+      ));
+      await GoogleSignIn.instance.signOut();
     }
   }
 }

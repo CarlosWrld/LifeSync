@@ -11,7 +11,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final key = GlobalKey();
-    await tester.pumpWidget(RepaintBoundary(key: key, child: const MyApp()));
+    await tester.pumpWidget(
+      RepaintBoundary(key: key, child: MyApp(restaurarSesion: () async => null)),
+    );
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Crear una cuenta'));
     await tester.tap(find.text('Crear una cuenta'));

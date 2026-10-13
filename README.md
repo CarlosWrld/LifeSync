@@ -1,5 +1,15 @@
 # LifeSync
 
+## APK para Amazon Appstore
+
+El paquete Android es `com.carlosjacoboperez.lifesync`. Compila con
+`flutter build apk --release` usando la clave de producción local.
+Se conservan el acceso con Google mediante Firebase y las cuentas locales existentes.
+El JSON del nuevo paquete está validado.
+Consulta [AMAZON_APPSTORE.md](AMAZON_APPSTORE.md) para firma, pruebas y distribución.
+La configuración Firebase y las firmas se describen en
+[GOOGLE_SIGN_IN.md](GOOGLE_SIGN_IN.md).
+
 ## Git y GitHub
 
 Consulta [VERSIONAMIENTO.md](VERSIONAMIENTO.md) para conectar el repositorio,
@@ -75,14 +85,18 @@ Pruebas de programación y formularios:
 
 - `lib/servicios/database_helper.dart` abre `lifesync.db` en el directorio
   privado de bases de datos de la aplicación mediante `sqflite` y `path`.
-- Tablas: `usuarios`, `tareas`, `habitos` y `eventos`.
+- Tablas: `usuarios`, `tareas`, `habitos`, `eventos` y `sesion_activa`.
 - Cada registro de organización pertenece a un `usuario_id`, con clave foránea
   e índice. Las lecturas, actualizaciones y eliminaciones se limitan a la sesión.
 - Correos normalizados (sin espacios exteriores y en minúsculas), con restricción
   UNIQUE. Contraseñas nuevas de al menos ocho caracteres, almacenadas como
   PBKDF2-HMAC-SHA256 con salt aleatorio y 600000 iteraciones, calculadas en un isolate.
-- La sesión vive en memoria: al reiniciar se vuelve a pedir el acceso, pero los
-  usuarios y sus datos permanecen guardados.
+- El esquema v6 recuerda la cuenta autenticada en `sesion_activa`, dentro de la
+  base privada. Al cerrar completamente la app y abrirla se recuperan la sesión,
+  el perfil y sus datos, tanto con correo como con Google, incluso sin conexión.
+  Solo se guarda el ID local de la cuenta, sin copiar tokens ni contraseñas.
+  **Perfil > Cerrar sesión** elimina ese registro sin borrar cuentas ni tareas.
+  Al actualizar desde v5 hay que entrar una vez: antes no se guardaba la sesión.
 - El esquema v2 migra el helper v1 conservando IDs y datos. Normaliza correos,
   convierte contraseñas antiguas a hashes y asigna administrador a la cuenta más
   antigua si no existía uno. Correos equivalentes se combinan bajo la cuenta más
@@ -90,7 +104,7 @@ Pruebas de programación y formularios:
   Si hay registros sin usuario, la migración se revierte sin borrarlos.
 - Los datos de ejemplo que sólo existían en memoria no son recuperables.
 - Las cuentas y datos pertenecen a esta instalación. Desinstalar o borrar los
-  datos de la aplicación elimina la base local. No hay inicio de sesión social.
+  datos de la aplicación elimina la base local, incluida la sesión guardada.
 - La ejecución web y Windows no está habilitada para la aplicación móvil.
   `sqflite_common_ffi` se usa únicamente en pruebas de escritorio.
 
