@@ -18,7 +18,10 @@ class FestivosService {
     }
     return _pendientes.putIfAbsent(
       year,
-      () => _consultar(year).whenComplete(() => _pendientes.remove(year)),
+      () => _consultar(year).whenComplete(() {
+        // No devolver el Future eliminado: haría que la consulta se espere a sí misma.
+        _pendientes.remove(year);
+      }),
     );
   }
 
