@@ -1,5 +1,18 @@
 # LifeSync
 
+## Descargar e instalar en Android
+
+**[Descargar LifeSync APK](https://github.com/CarlosWrld/LifeSync/releases/download/v1.0.0-preview.1/LifeSync-1.0.0-release.apk)** ·
+[Detalles de la versión de prueba](https://github.com/CarlosWrld/LifeSync/releases/tag/v1.0.0-preview.1)
+
+Requiere Android 7.0 o posterior. Descarga el APK desde tu teléfono, ábrelo y
+autoriza la instalación desde tu navegador si Android lo solicita. El acceso
+con Google requiere Google Play Services. No necesitas compilar el proyecto.
+
+La descarga está en **Releases > Assets**, con su archivo de verificación SHA-256.
+Si ya tienes una versión debug instalada, consulta las notas de la versión:
+la firma es distinta y desinstalar la app elimina sus datos locales.
+
 ## APK para Amazon Appstore
 
 El paquete Android es `com.carlosjacoboperez.lifesync`. Compila con

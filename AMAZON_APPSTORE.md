@@ -17,9 +17,16 @@ cuenta al abrir la app y elimina la sesión guardada desde Perfil > Cerrar sesi�
 La migración a SQLite v6 conserva los datos y requiere iniciar sesión una vez.
 Verificación de esta actualización: `flutter test`, 46 pruebas aprobadas,
 incluidas restauración al reiniciar, cierre de sesión y migración sin pérdida de
-datos. El análisis y la compilación debug quedaron pendientes porque se rechazó
-el permiso de ejecución. No se instaló esta actualización ni se regeneró el
-release: el APK de `output/apk` todavía corresponde a la entrega anterior.
+datos. Se regeneró el APK release con la sesión persistente y se verificaron
+su firma de producción, identificador, versión y arquitecturas con el SDK Android.
+El análisis de esta actualización quedó pendiente porque se rechazó el permiso
+de ejecución. Falta validar el APK release en un dispositivo.
+
+La descarga de prueba está en [GitHub Releases](https://github.com/CarlosWrld/LifeSync/releases/tag/v1.0.0-preview.1),
+con los archivos `LifeSync-1.0.0-release.apk` y su `.sha256`. El APK se distribuye
+como archivo adjunto de la versión; las claves de firma permanecen fuera de Git.
+La etiqueta corresponde a la rama `feature/amazon-release`, aún sin integrar
+en `main` al preparar esta descarga, y no indica publicación en Amazon.
 
 ## Distribución Android
 
