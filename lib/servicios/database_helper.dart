@@ -37,11 +37,12 @@ class DatabaseHelper {
       return await factory.openDatabase(
         path,
         options: OpenDatabaseOptions(
-          version: 5,
+          version: 6,
           onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
           onCreate: (db, _) async {
             await _create(db);
             await _configurarAdmin(db);
+            await _crearTablaSesion(db);
           },
           onUpgrade: (db, oldVersion, _) async {
             if (oldVersion < 2) await _migrateV1(db);
@@ -63,6 +64,7 @@ class DatabaseHelper {
                 await db.execute('ALTER TABLE usuarios ADD COLUMN foto BLOB');
               }
             }
+            if (oldVersion < 6) await _crearTablaSesion(db);
           },
         ),
       );
@@ -70,6 +72,30 @@ class DatabaseHelper {
       _opening = null;
       rethrow;
     }
+  }
+
+  Future<void> _crearTablaSesion(DatabaseExecutor db) => db.execute('''
+    CREATE TABLE IF NOT EXISTS sesion_activa (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE
+    )
+  ''');
+
+  Future<void> _guardarSesion(DatabaseExecutor db, int usuarioId) async {
+    // Solo recuerda la cuenta ya autenticada; no almacena tokens ni contraseñas.
+    await db.insert('sesion_activa', {
+      'id': 1,
+      'usuario_id': usuarioId,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Usuario?> restaurarSesion() async {
+    final rows = await (await database).rawQuery('''
+      SELECT usuarios.* FROM usuarios
+      INNER JOIN sesion_activa ON sesion_activa.usuario_id = usuarios.id
+      WHERE sesion_activa.id = 1
+    ''');
+    return _session = rows.isEmpty ? null : Usuario.fromMap(rows.single);
   }
 
   // Se ejecuta una sola vez al crear o actualizar la base local.
@@ -213,6 +239,7 @@ class DatabaseHelper {
         'proveedor': 'correo',
       };
       final id = await txn.insert('usuarios', values);
+      await _guardarSesion(txn, id);
       return Usuario.fromMap({...values, 'id': id});
     });
     _session = user;
@@ -220,7 +247,7 @@ class DatabaseHelper {
   }
 
   Future<Usuario?> iniciarSesion(String correo, String password) async {
-    _session = null;
+    await cerrarSesion();
     final db = await database;
     final rows = await db.query(
       'usuarios',
@@ -235,11 +262,13 @@ class DatabaseHelper {
         )) {
       return null;
     }
-    return _session = Usuario.fromMap(rows.first);
+    final usuario = Usuario.fromMap(rows.first);
+    await _guardarSesion(db, usuario.id);
+    return _session = usuario;
   }
 
   Future<Usuario?> iniciarSesionGoogle() async {
-    _session = null;
+    await cerrarSesion();
     final cuenta = await GoogleAuthService.instance.autenticar();
     if (cuenta == null) return null;
     try {
@@ -264,7 +293,7 @@ class DatabaseHelper {
     required String correo,
     required String nombre,
   }) async {
-    _session = null;
+    await cerrarSesion();
     if (googleId.isEmpty || correo.trim().isEmpty) {
       throw AccesoDenegadoException();
     }
@@ -275,7 +304,11 @@ class DatabaseHelper {
         where: 'google_id = ?',
         whereArgs: [googleId],
       );
-      if (existentes.isNotEmpty) return Usuario.fromMap(existentes.single);
+      if (existentes.isNotEmpty) {
+        final usuario = Usuario.fromMap(existentes.single);
+        await _guardarSesion(txn, usuario.id);
+        return usuario;
+      }
       final email = correo.trim().toLowerCase();
       if ((await txn.query(
         'usuarios',
@@ -296,6 +329,7 @@ class DatabaseHelper {
         'google_id': googleId,
       };
       final id = await txn.insert('usuarios', datos);
+      await _guardarSesion(txn, id);
       return Usuario.fromMap({...datos, 'id': id});
     });
     return _session = usuario;
@@ -336,7 +370,11 @@ class DatabaseHelper {
     return actualizado;
   }
 
-  void cerrarSesion() => _session = null;
+  Future<void> cerrarSesion() async {
+    await (await database).delete('sesion_activa');
+    _session = null;
+  }
+
   int _owner() {
     if (_session == null) throw AccesoDenegadoException();
     return _session!.id;
@@ -450,7 +488,7 @@ class DatabaseHelper {
   }
 
   Future<void> close() async {
-    cerrarSesion();
+    _session = null;
     final pending = _opening;
     _opening = null;
     if (pending != null) await (await pending).close();

@@ -107,7 +107,7 @@ void main() {
     );
     expect(deNuevo.nombre, 'Mi nombre');
     expect(deNuevo.foto, orderedEquals(foto));
-    db.cerrarSesion();
+    await db.cerrarSesion();
     await expectLater(
       db.actualizarPerfil(usuarioId: ana.id, nombre: 'Sin sesión', foto: null),
       throwsA(isA<AccesoDenegadoException>()),
@@ -177,6 +177,6 @@ void main() {
       foto: foto,
     );
     expect(db.usuarioActual?.foto, orderedEquals(foto));
-    expect(await (await db.database).getVersion(), 5);
+    expect(await (await db.database).getVersion(), 6);
   });
 }
